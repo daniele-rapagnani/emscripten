@@ -10,7 +10,10 @@
 //                   or otherwise).
 
 var LibrarySDL = {
-  $SDL__deps: ['$FS', '$PATH', '$Browser', 'SDL_GetTicks'],
+  $SDL__deps: [
+    '$FS', '$PATH', '$Browser', 'SDL_GetTicks',
+    function() { return 'var Bitmap = ' + read('bitmap.js') + ';\n' },
+  ],
   $SDL: {
     defaults: {
       width: 320,
@@ -18,7 +21,7 @@ var LibrarySDL = {
       // If true, SDL_LockSurface will copy the contents of each surface back to the Emscripten HEAP so that C code can access it. If false,
       // the surface contents are captured only back to JS code.
       copyOnLock: true,
-      // If true, SDL_LockSurface will discard the contents of each surface when SDL_LockSurface() is called. This greatly improves performance 
+      // If true, SDL_LockSurface will discard the contents of each surface when SDL_LockSurface() is called. This greatly improves performance
       // of SDL_LockSurface(). If discardOnLock is true, copyOnLock is ignored.
       discardOnLock: false,
       // If true, emulate compatibility with desktop SDL by ignoring alpha on the screen frontbuffer canvas. Setting this to false will improve
@@ -92,7 +95,7 @@ var LibrarySDL = {
     DOMEventToSDLEvent: {},
 
     TOUCH_DEFAULT_ID: 0, // Our default deviceID for touch events (we get nothing from the browser)
-    
+
     eventHandler: null,
     eventHandlerContext: null,
     eventHandlerTemp: 0,
@@ -115,10 +118,10 @@ var LibrarySDL = {
       44: 316, // print screen
       45: 73 | 1<<10, // insert
       46: 127, // SDLK_DEL == '\177'
-      
+
       91: 227 | 1<<10, // windows key or super key on linux (doesn't work on Mac)
       93: 101 | 1<<10, // application
-      
+
       96: 98 | 1<<10, // keypad 0
       97: 89 | 1<<10, // keypad 1
       98: 90 | 1<<10, // keypad 2
@@ -131,7 +134,7 @@ var LibrarySDL = {
       105: 97 | 1<<10, // keypad 9
       106: 85 | 1<<10, // keypad multiply
       107: 87 | 1<<10, // keypad plus
-      109: 86 | 1<<10, // keypad minus	  
+      109: 86 | 1<<10, // keypad minus
       110: 99 | 1<<10, // keypad decimal point
       111: 84 | 1<<10, // keypad divide
       112: 58 | 1<<10, // F1
@@ -145,7 +148,7 @@ var LibrarySDL = {
       120: 66 | 1<<10, // F9
       121: 67 | 1<<10, // F10
       122: 68 | 1<<10, // F11
-      123: 69 | 1<<10, // F12      
+      123: 69 | 1<<10, // F12
       124: 104 | 1<<10, // F13
       125: 105 | 1<<10, // F14
       126: 106 | 1<<10, // F15
@@ -160,7 +163,7 @@ var LibrarySDL = {
       135: 115 | 1<<10, // F24
 
       144: 83 | 1<<10, // keypad num lock
-      
+
       160: 94, // caret
       161: 33, // exclaim
       162: 34, // double quote
@@ -173,16 +176,16 @@ var LibrarySDL = {
       169: 41, // close parenthesis
       170: 42, // asterix
       171: 43, // plus
-      172: 124, // pipe     
+      172: 124, // pipe
       173: 45, // minus
       174: 123, // open curly bracket
       175: 125, // close curly bracket
       176: 126, // tilde
-      
+
       181: 127, // audio mute
       182: 129, // audio volume down
       183: 128, // audio volume up
-      
+
       188: 44, // comma
       190: 46, // period
       191: 47, // slash (/)
@@ -191,7 +194,7 @@ var LibrarySDL = {
       220: 92, // back slash
       221: 93, // close square bracket
       222: 39, // quote
-      224: 227 | 1<<10, // meta (command/windows)      
+      224: 227 | 1<<10, // meta (command/windows)
     },
 
     scanCodes: { // SDL keycode ==> SDL scancode. See SDL_scancode.h
@@ -201,13 +204,13 @@ var LibrarySDL = {
       27: 41, // escape
       32: 44, // space
       35: 204, // hash
-      
+
       39: 53, // grave
-      
+
       44: 54, // comma
       46: 55, // period
       47: 56, // slash
-      48: 39, // 0      
+      48: 39, // 0
       49: 30, // 1
       50: 31, // 2
       51: 32, // 3
@@ -221,11 +224,11 @@ var LibrarySDL = {
       59: 51, // semicolon
 
       61: 46, // equals
-      
+
       91: 47, // left bracket
       92: 49, // backslash
       93: 48, // right bracket
-      
+
       96: 52, // apostrophe
       97: 4, // A
       98: 5, // B
@@ -255,11 +258,11 @@ var LibrarySDL = {
       122: 29, // Z
 
       127: 76, // delete
-      
+
       305: 224, // ctrl
-      
+
       308: 226, // alt
-      
+
       316: 70, // print screen
     },
     loadRect: function(rect) {
@@ -324,7 +327,7 @@ var LibrarySDL = {
       return r | g << 8 | b << 16 | a << 24;
     },
 
-    makeSurface: function(width, height, flags, usePageCanvas, source, rmask, gmask, bmask, amask) {
+    makeSurface: function(width, height, flags, usePageCanvas, source, rmask, gmask, bmask, amask, depth) {
       flags = flags || 0;
       var is_SDL_HWSURFACE = flags & 0x00000001;
       var is_SDL_HWPALETTE = flags & 0x00200000;
@@ -333,7 +336,7 @@ var LibrarySDL = {
       var surf = _malloc({{{ C_STRUCTS.SDL_Surface.__size__ }}});
       var pixelFormat = _malloc({{{ C_STRUCTS.SDL_PixelFormat.__size__ }}});
       //surface with SDL_HWPALETTE flag is 8bpp surface (1 byte)
-      var bpp = is_SDL_HWPALETTE ? 1 : 4;
+      var bpp = is_SDL_HWPALETTE ? 1 : (depth / 8);
       var buffer = 0;
 
       // preemptively initialize this for software surfaces,
@@ -341,6 +344,11 @@ var LibrarySDL = {
       if (!is_SDL_HWSURFACE && !is_SDL_OPENGL) {
         buffer = _malloc(width * height * 4);
       }
+
+      rmask = rmask >>> 0 || 0x000000ff;
+      gmask = gmask >>> 0 || 0x0000ff00;
+      bmask = bmask >>> 0 || 0x00ff0000;
+      amask = amask >>> 0;
 
       {{{ makeSetValue('surf', C_STRUCTS.SDL_Surface.flags, 'flags', 'i32') }}};
       {{{ makeSetValue('surf', C_STRUCTS.SDL_Surface.format, 'pixelFormat', 'void*') }}};
@@ -362,10 +370,10 @@ var LibrarySDL = {
       {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.BitsPerPixel, 'bpp * 8', 'i8') }}};
       {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.BytesPerPixel, 'bpp', 'i8') }}};
 
-      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Rmask, 'rmask || 0x000000ff', 'i32') }}};
-      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Gmask, 'gmask || 0x0000ff00', 'i32') }}};
-      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Bmask, 'bmask || 0x00ff0000', 'i32') }}};
-      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Amask, 'amask || 0xff000000', 'i32') }}};
+      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Rmask, 'rmask', 'i32') }}};
+      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Gmask, 'gmask', 'i32') }}};
+      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Bmask, 'bmask', 'i32') }}};
+      {{{ makeSetValue('pixelFormat', C_STRUCTS.SDL_PixelFormat.Amask, 'amask', 'i32') }}};
 
       // Decide if we want to use WebGL or not
       SDL.GL = SDL.GL || is_SDL_OPENGL;
@@ -387,9 +395,9 @@ var LibrarySDL = {
         depth: (SDL.glAttributes[6 /*SDL_GL_DEPTH_SIZE*/] > 0),
         stencil: (SDL.glAttributes[7 /*SDL_GL_STENCIL_SIZE*/] > 0)
       };
-      
+
       var ctx = Browser.createContext(canvas, is_SDL_OPENGL, usePageCanvas, webGLContextAttributes);
-            
+
       SDL.surfaces[surf] = {
         width: width,
         height: height,
@@ -403,6 +411,11 @@ var LibrarySDL = {
         locked: 0,
         usePageCanvas: usePageCanvas,
         source: source,
+        rmask: rmask,
+        gmask: gmask,
+        bmask: bmask,
+        amask: amask,
+        depth: depth || 32,
 
         isFlagSet: function(flag) {
           return flags & flag;
@@ -412,7 +425,91 @@ var LibrarySDL = {
       return surf;
     },
 
-    // Copy data from the C++-accessible storage to the canvas backing 
+    convertPixels: function(surfData, image) {
+      var getMaskShift = function(mask) {
+        for (var i = 0; i < 64; i++) {
+          var test = Math.pow(2, i);
+          if (((mask & test) >>> 0) > 0) {
+            return i;
+          }
+        }
+
+        return 0;
+      };
+
+      image = image || surfData.image;
+
+      var buffer = surfData.buffer;
+      var data = image.data;
+      var data32 = new Uint32Array(data.buffer);
+      var data8 = new Uint8Array(data.buffer);
+      var offset = 0;
+      var bytesPerPixel = surfData.depth / 8;
+      var pitch = surfData.width * /*(surfData.depth > 16 ? 4 : */bytesPerPixel/*)*/;
+      var i = 0;
+      var value = 0;
+      var index = 0;
+
+      var amask = 0;
+      var bmask = 0x00FF0000;
+      var gmask = 0x0000FF00;
+      var rmask = 0x000000FF;
+
+
+      if (surfData.depth > 8) {
+        rmask = surfData.rmask;
+        gmask = surfData.gmask;
+        bmask = surfData.bmask;
+        amask = surfData.amask;
+      }
+
+      rshift = getMaskShift(rmask);
+      gshift = getMaskShift(gmask);
+      bshift = getMaskShift(bmask);
+      ashift = getMaskShift(amask);
+
+      if (rmask == 0x000000FF && bmask == 0x00FF0000 && gmask == 0x0000FF00 && amask == 0xFF000000) {
+        var src = surfData.buffer >> 2;
+        var data32 = new Uint32Array(image.data.buffer);
+        data32.set(HEAP32.subarray(src, src + data32.length));
+        return;
+      }
+
+      for(var y = 0; y < surfData.height; y++) {
+        for(var x = 0; x < surfData.width; x++) {
+          offset = (y * pitch) + (x * bytesPerPixel);
+
+          if (surfData.depth == 32) {
+            value = getValue(buffer + offset, 'i32') & 0xFFFFFFFF;
+          } else if (surfData.depth == 24) {
+            value = (
+              (getValue(buffer + offset, 'i8') & 0xFF) |
+              (getValue(buffer + offset + 1, 'i8') & 0xFF) << 8 |
+              (getValue(buffer + offset + 2, 'i8') & 0xFF) << 16
+            );
+          } else if (surfData.depth == 16) {
+            value = (
+              getValue(buffer + offset, 'i8') & 0xFF |
+              (getValue(buffer + offset + 1, 'i8') & 0xFF) << 8
+            );
+          } else if (surfData.depth == 8) {
+            index = (getValue(buffer + offset, 'i8') & 0xFF) >>> 0;
+            value = surfData.colors32[index];
+          }
+
+          data8[i] = (value & rmask) >>> rshift;
+          data8[i+1] = (value & gmask) >>> gshift;
+          data8[i+2] = (value & bmask) >>> bshift;
+          data8[i+3] = amask ? (value & amask) >>> ashift : 0xFF;
+
+          i += 4;
+        }
+      }
+
+      //surfData.ctx.putImageData(image, 0, 0);
+    },
+
+    // Copy data from the C++-accessible storage to the canvas backing
     // for surface with HWPALETTE flag(8bpp depth)
     copyIndexedColorData: function(surfData, rX, rY, rW, rH) {
       // HWPALETTE works with palette
@@ -420,7 +517,7 @@ var LibrarySDL = {
       if (!surfData.colors) {
         return;
       }
-      
+
       var fullWidth  = Module['canvas'].width;
       var fullHeight = Module['canvas'].height;
 
@@ -428,7 +525,7 @@ var LibrarySDL = {
       var startY  = rY || 0;
       var endX    = (rW || (fullWidth - startX)) + startX;
       var endY    = (rH || (fullHeight - startY)) + startY;
-      
+
       var buffer  = surfData.buffer;
 
       if (!surfData.image.data32) {
@@ -483,12 +580,12 @@ var LibrarySDL = {
       if (dstData.clipRect) {
         var widthScale = (!scale || sr.w === 0) ? 1 : sr.w / dr.w;
         var heightScale = (!scale || sr.h === 0) ? 1 : sr.h / dr.h;
-        
+
         dr = SDL.intersectionOfRects(dstData.clipRect, dr);
-        
+
         sr.w = dr.w * widthScale;
         sr.h = dr.h * heightScale;
-        
+
         if (dstrect) {
           SDL.updateRect(dstrect, dr);
         }
@@ -502,16 +599,19 @@ var LibrarySDL = {
       if (sr.w === 0 || sr.h === 0 || blitw === 0 || blith === 0) {
         return 0;
       }
+
       var oldAlpha = dstData.ctx.globalAlpha;
       dstData.ctx.globalAlpha = srcData.alpha/255;
       dstData.ctx.drawImage(srcData.canvas, sr.x, sr.y, sr.w, sr.h, dr.x, dr.y, blitw, blith);
       dstData.ctx.globalAlpha = oldAlpha;
+
       if (dst != SDL.screen) {
         // XXX As in IMG_Load, for compatibility we write out |pixels|
         Runtime.warnOnce('WARNING: copying canvas data to memory for compatibility');
         _SDL_LockSurface(dst);
         dstData.locked--; // The surface is not actually locked in this hack
       }
+
       return 0;
     },
 
@@ -540,7 +640,7 @@ var LibrarySDL = {
           event.preventDefault();
 
           var touches = [];
-          
+
           // Clear out any touchstart events that we've already processed
           if (event.type === 'touchstart') {
             for (var i = 0; i < event.touches.length; i++) {
@@ -553,7 +653,7 @@ var LibrarySDL = {
           } else {
             touches = event.touches;
           }
-          
+
           var firstTouch = touches[0];
           if (event.type == 'touchstart') {
             SDL.DOMButtons[0] = 1;
@@ -582,7 +682,7 @@ var LibrarySDL = {
         }
         case 'touchend': {
           event.preventDefault();
-          
+
           // Remove the entry in the SDL.downFingers hash
           // because the finger is no longer down.
           for(var i = 0; i < event.changedTouches.length; i++) {
@@ -600,7 +700,7 @@ var LibrarySDL = {
           };
           SDL.DOMButtons[0] = 0;
           SDL.events.push(mouseEvent);
-          
+
           for (var i = 0; i < event.changedTouches.length; i++) {
             var touch = event.changedTouches[i];
             SDL.events.push({
@@ -935,8 +1035,8 @@ var LibrarySDL = {
         case 'wheel': {
           {{{ makeSetValue('ptr', C_STRUCTS.SDL_MouseWheelEvent.type, 'SDL.DOMEventToSDLEvent[event.type]', 'i32') }}};
           {{{ makeSetValue('ptr', C_STRUCTS.SDL_MouseWheelEvent.x, 'event.deltaX', 'i32') }}};
-          {{{ makeSetValue('ptr', C_STRUCTS.SDL_MouseWheelEvent.y, 'event.deltaY', 'i32') }}}; 
-          break;       
+          {{{ makeSetValue('ptr', C_STRUCTS.SDL_MouseWheelEvent.y, 'event.deltaY', 'i32') }}};
+          break;
         }
         case 'touchstart': case 'touchend': case 'touchmove': {
           var touch = event.touch;
@@ -1178,6 +1278,51 @@ var LibrarySDL = {
       }
     },
 
+    dumpSurface: function(surf) {
+      // var surfData = SDL.surfaces[surf];
+      // console.log("DUMPING WHOLE SURFACE", surfData);
+      // var output = "";
+      // var length = (surfData.width * surfData.height) * (surfData.depth / 8);
+      // for (var i = 0; i < length; i++) {
+      //   var value = getValue(surfData.buffer + i, 'i8') & 0xFF >>> 0;
+      //   output += value+',';
+      // }
+      // console.log(output);
+      // output = "";
+      // if (surfData.colors) {
+      //   console.log("DUMPING COLORS");
+      //   for (var i = 0; i < surfData.colors.length; i++) {
+      //     var value = surfData.colors[i];
+      //     output += value+',';
+      //   }
+      // }
+      // console.log(output);
+      var surfData = SDL.surfaces[surf];
+      console.log("DUMPING WHOLE SURFACE", surfData);
+      var bmp = new Bitmap(surfData.width, surfData.height, surfData.depth, false);
+
+      if (surfData.depth == 8) {
+        for (var y = 0; y < surfData.height; y++) {
+          for (var x = 0; x < surfData.width; x++) {
+            bmp.setPixel(x,y, getValue(surfData.buffer + (y * surfData.width) + x, 'i8') & 0xFF >>> 0);
+          }
+        }
+
+        for (var i = 0; i < surfData.colors32.length; i++) {
+          bmp.setPaletteColor(i, surfData.colors32[i]);
+        }
+      } else if (surfData.depth == 32) {
+        console.log("DUMPING 32 BIT PIXELS");
+        for (var y = 0; y < surfData.height; y++) {
+          for (var x = 0; x < surfData.width; x++) {
+            bmp.setPixel(x, y, getValue(surfData.buffer + (y * surfData.width * 4) + (x * 4), 'i32') >>> 0);
+          }
+        }
+      }
+
+      window.open(bmp.getURL());
+    },
+
     // Joystick helper methods and state
 
     joystickEventState: 1, // SDL_ENABLE
@@ -1324,7 +1469,7 @@ var LibrarySDL = {
     SDL.DOMEventToSDLEvent['mousedown']  = 0x401  /* SDL_MOUSEBUTTONDOWN */;
     SDL.DOMEventToSDLEvent['mouseup']    = 0x402  /* SDL_MOUSEBUTTONUP */;
     SDL.DOMEventToSDLEvent['mousemove']  = 0x400  /* SDL_MOUSEMOTION */;
-    SDL.DOMEventToSDLEvent['wheel']      = 0x403  /* SDL_MOUSEWHEEL */; 
+    SDL.DOMEventToSDLEvent['wheel']      = 0x403  /* SDL_MOUSEWHEEL */;
     SDL.DOMEventToSDLEvent['touchstart'] = 0x700  /* SDL_FINGERDOWN */;
     SDL.DOMEventToSDLEvent['touchend']   = 0x701  /* SDL_FINGERUP */;
     SDL.DOMEventToSDLEvent['touchmove']  = 0x702  /* SDL_FINGERMOTION */;
@@ -1367,7 +1512,7 @@ var LibrarySDL = {
   },
 
   SDL_VideoModeOK: function(width, height, depth, flags) {
-    // SDL_VideoModeOK returns 0 if the requested mode is not supported under any bit depth, or returns the 
+    // SDL_VideoModeOK returns 0 if the requested mode is not supported under any bit depth, or returns the
     // bits-per-pixel of the closest available mode with the given width, height and requested surface flags
     return depth; // all modes are ok.
   },
@@ -1382,7 +1527,7 @@ var LibrarySDL = {
       return 0; //return NULL
     }
     //driverName - emscripten_sdl_driver
-    var driverName = [101, 109, 115, 99, 114, 105, 112, 116, 101, 
+    var driverName = [101, 109, 115, 99, 114, 105, 112, 116, 101,
       110, 95, 115, 100, 108, 95, 100, 114, 105, 118, 101, 114];
 
     var index = 0;
@@ -1529,9 +1674,9 @@ var LibrarySDL = {
         // var data = '';
         // for (var i = 0; i<size; i++) {
         //   var color = SDL.translateRGBAToColor(
-        //     surfData.image.data[i*4   ], 
-        //     surfData.image.data[i*4 +1], 
-        //     surfData.image.data[i*4 +2], 
+        //     surfData.image.data[i*4   ],
+        //     surfData.image.data[i*4 +1],
+        //     surfData.image.data[i*4 +2],
         //     255);
         //   var index = surfData.colorMap[color];
         //   {{{ makeSetValue('surfData.buffer', 'i', 'index', 'i8') }}};
@@ -1624,10 +1769,11 @@ var LibrarySDL = {
             }
           }
         } else {
-          data32.set(HEAP32.subarray(src, src + data32.length));
+          SDL.convertPixels(surfData);
         }
       }
     } else {
+/*
       var width = Module['canvas'].width;
       var height = Module['canvas'].height;
       var s = surfData.buffer;
@@ -1645,6 +1791,8 @@ var LibrarySDL = {
         }
         s += width*3;
       }
+*/
+      SDL.convertPixels(surfData);
     }
     // Copy to canvas
     surfData.ctx.putImageData(surfData.image, 0, 0);
@@ -1700,7 +1848,7 @@ var LibrarySDL = {
   SDL_GetKeyState: function() {
     return _SDL_GetKeyboardState();
   },
-  
+
   SDL_GetKeyName: function(key) {
     if (!SDL.keyName) {
       SDL.keyName = allocate(intArrayFromString('unknown key'), 'i8', ALLOC_NORMAL);
@@ -1764,34 +1912,28 @@ var LibrarySDL = {
   SDL_free: 'free',
 
   SDL_CreateRGBSurface: function(flags, width, height, depth, rmask, gmask, bmask, amask) {
-    return SDL.makeSurface(width, height, flags, false, 'CreateRGBSurface', rmask, gmask, bmask, amask);
+    return SDL.makeSurface(width, height, flags, false, 'CreateRGBSurface', rmask, gmask, bmask, amask, depth);
   },
 
   SDL_CreateRGBSurfaceFrom: function(pixels, width, height, depth, pitch, rmask, gmask, bmask, amask) {
-    var surf = SDL.makeSurface(width, height, 0, false, 'CreateRGBSurfaceFrom', rmask, gmask, bmask, amask);
+    var surf = SDL.makeSurface(width, height, 0, false, 'CreateRGBSurfaceFrom', rmask, gmask, bmask, amask, depth);
 
-    if (depth !== 32) {
-      // TODO: Actually fill pixel data to created surface.
-      // TODO: Take into account depth and pitch parameters.
-      console.log('TODO: Partially unimplemented SDL_CreateRGBSurfaceFrom called!');
+    var data = SDL.surfaces[surf];
+    var image = data.image = data.ctx.createImageData(width, height);
+    _free(data.buffer);
+    data.buffer = pixels;
+    {{{ makeSetValue('surf', C_STRUCTS.SDL_Surface.pixels, 'pixels', 'void*') }}};
+
+    // If there is no palette and this is an 8 bit surface
+    // we skip drawing the pixels data to the underlying
+    // canvas
+    if (depth == 8 && !data.colors) {
       return surf;
     }
-    
-    var data = SDL.surfaces[surf];
-    var image = data.ctx.createImageData(width, height);
-    var pitchOfDst = width * 4;
 
-    for (var row = 0; row < height; ++row) {
-      var baseOfSrc = row * pitch;
-      var baseOfDst = row * pitchOfDst;
-
-      for (var col = 0; col < width * 4; ++col) {
-        image.data[baseOfDst + col] = {{{ makeGetValue('pixels', 'baseOfDst + col', 'i8', null, true) }}};
-      }
-    }
-
+    SDL.convertPixels(data, image);
     data.ctx.putImageData(image, 0, 0);
- 
+
     return surf;
   },
 
@@ -1803,7 +1945,7 @@ var LibrarySDL = {
     var oldData = SDL.surfaces[surf];
     var ret = SDL.makeSurface(oldData.width, oldData.height, oldData.flags, false, 'copy:' + oldData.source);
     var newData = SDL.surfaces[ret];
-    
+
     newData.ctx.globalCompositeOperation = "copy";
     newData.ctx.drawImage(oldData.canvas, 0, 0);
     newData.ctx.globalCompositeOperation = oldData.ctx.globalCompositeOperation;
@@ -1986,7 +2128,7 @@ var LibrarySDL = {
       SDL.handleEvent(event);
     });
   },
-  
+
   // An Emscripten-specific extension to SDL: Some browser APIs require that they are called from within an event handler function.
   // Allow recording a callback that will be called for each received event.
   emscripten_SDL_SetEventHandler: function(handler, userdata) {
@@ -2002,13 +2144,13 @@ var LibrarySDL = {
 
     // we should create colors array
     // only once cause client code
-    // often wants to change portion 
+    // often wants to change portion
     // of palette not all palette.
     if (!surfData.colors) {
       var buffer = new ArrayBuffer(256 * 4); // RGBA, A is unused, but faster this way
       surfData.colors = new Uint8Array(buffer);
       surfData.colors32 = new Uint32Array(buffer);
-    } 
+    }
 
     for (var i = 0; i < nColors; ++i) {
       var index = (firstColor + i) * 4;
@@ -2016,6 +2158,10 @@ var LibrarySDL = {
       surfData.colors[index + 1] = {{{ makeGetValue('colors', 'i*4 + 1', 'i8', null, true) }}};
       surfData.colors[index + 2] = {{{ makeGetValue('colors', 'i*4 + 2', 'i8', null, true) }}};
       surfData.colors[index + 3] = 255; // opaque
+    }
+
+    if (surfData.depth == 8) {
+      SDL.convertPixels(surfData, surfData.image);
     }
 
     return 1;
@@ -2084,7 +2230,7 @@ var LibrarySDL = {
   },
 
   SDL_WM_GrabInput: function() {},
-  
+
   SDL_WM_ToggleFullScreen: function(surf) {
     if (Browser.isFullScreen) {
       Module['canvas'].cancelFullScreen();
@@ -2303,14 +2449,14 @@ var LibrarySDL = {
       } else if ((SDL.audio.samples & (SDL.audio.samples-1)) != 0) {
         throw 'Audio callback buffer size ' + SDL.audio.samples + ' must be a power-of-two!';
       }
-      
+
       var totalSamples = SDL.audio.samples*SDL.audio.channels;
       SDL.audio.bytesPerSample = (SDL.audio.format == 0x0008 /*AUDIO_U8*/ || SDL.audio.format == 0x8008 /*AUDIO_S8*/) ? 1 : 2;
       SDL.audio.bufferSize = totalSamples*SDL.audio.bytesPerSample;
       SDL.audio.bufferDurationSecs = SDL.audio.bufferSize / SDL.audio.bytesPerSample / SDL.audio.channels / SDL.audio.freq; // Duration of a single queued buffer in seconds.
       SDL.audio.bufferingDelay = 50 / 1000; // Audio samples are played with a constant delay of this many seconds to account for browser and jitter.
       SDL.audio.buffer = _malloc(SDL.audio.bufferSize);
-      
+
       // To account for jittering in frametimes, always have multiple audio buffers queued up for the audio output device.
       // This helps that we won't starve that easily if a frame takes long to complete.
       SDL.audio.numSimultaneouslyQueuedBuffers = Module['SDL_numSimultaneouslyQueuedBuffers'] || 5;
@@ -2333,7 +2479,7 @@ var LibrarySDL = {
           // And queue it to be played after the currently playing audio stream.
           SDL.audio.pushAudio(SDL.audio.buffer, SDL.audio.bufferSize);
         }
-      } 
+      }
 
 #if EMTERPRETIFY_ASYNC
       var yieldCallback = function() {
@@ -2368,7 +2514,7 @@ var LibrarySDL = {
           }
         }
       };
-      
+
       SDL.audio.audioOutput = new Audio();
 
       // Initialize Web Audio API if we haven't done so yet. Note: Only initialize Web Audio context ever once on the web page,
@@ -2376,7 +2522,7 @@ var LibrarySDL = {
       SDL.openAudioContext();
       if (!SDL.audioContext) throw 'Web Audio API is not available!';
       SDL.audio.nextPlayTime = 0; // Time in seconds when the next audio block is due to start.
-      
+
       // The pushAudio function with a new audio buffer whenever there is new audio data to schedule to be played back on the device.
       SDL.audio.pushAudio=function(ptr,sizeBytes) {
         try {
@@ -2395,7 +2541,7 @@ var LibrarySDL = {
           SDL.fillWebAudioBufferFromHeap(ptr, sizeSamplesPerChannel, soundBuffer);
           // Workaround https://bugzilla.mozilla.org/show_bug.cgi?id=883675 by setting the buffer only after filling. The order is important here!
           source['buffer'] = soundBuffer;
-          
+
           // Schedule the generated sample buffer to be played out at the correct time right after the previously scheduled
           // sample buffer has finished.
           var curtime = SDL.audioContext['currentTime'];
@@ -2404,7 +2550,7 @@ var LibrarySDL = {
             console.log('warning: Audio callback had starved sending audio by ' + (curtime - SDL.audio.nextPlayTime) + ' seconds.');
           }
 #endif
-          // Don't ever start buffer playbacks earlier from current time than a given constant 'SDL.audio.bufferingDelay', since a browser 
+          // Don't ever start buffer playbacks earlier from current time than a given constant 'SDL.audio.bufferingDelay', since a browser
           // may not be able to mix that audio clip in immediately, and there may be subsequent jitter that might cause the stream to starve.
           var playtime = Math.max(curtime + SDL.audio.bufferingDelay, SDL.audio.nextPlayTime);
           if (typeof source['start'] !== 'undefined') {
@@ -2420,7 +2566,7 @@ var LibrarySDL = {
           }
           SDL.audio.curBufferEnd = Math.round(playtime * SDL.audio.freq + sizeSamplesPerChannel);
           */
-          
+
           SDL.audio.nextPlayTime = playtime + SDL.audio.bufferDurationSecs;
         } catch(e) {
           console.log('Web Audio API error playing back audio: ' + e.toString());
@@ -2894,7 +3040,7 @@ var LibrarySDL = {
     }
     return 0;
   },
-  
+
   Mix_Pause: function(channel) {
     if (channel === -1) {
       for (var i = 0; i<SDL.channels.length;i++) {
@@ -2909,7 +3055,7 @@ var LibrarySDL = {
       //Module.printErr('Mix_Pause: no sound found for channel: ' + channel);
     }
   },
-  
+
   // http://www.libsdl.org/projects/SDL_mixer/docs/SDL_mixer_39.html#SEC39
   Mix_Paused: function(channel) {
     if (channel === -1) {
@@ -2951,13 +3097,17 @@ var LibrarySDL = {
   },
 
   TTF_OpenFont: function(filename, size) {
-    filename = FS.standardizePath(Pointer_stringify(filename));
     var id = SDL.fonts.length;
     SDL.fonts.push({
-      name: filename, // but we don't actually do anything with it..
       size: size
     });
     return id;
+  },
+
+  TTF_OpenFontRW__deps: ['TTF_OpenFont'],
+  TTF_OpenFontRW: function(rwopsID, freesrc, size) {
+    var rwops = SDL.rwops[rwopsID];
+    return _TTF_OpenFont(rwops.filename, size);
   },
 
   TTF_CloseFont: function(font) {
@@ -3001,21 +3151,21 @@ var LibrarySDL = {
   TTF_GlyphMetrics: function(font, ch, minx, maxx, miny, maxy, advance) {
     var fontData = SDL.fonts[font];
     var width = SDL.estimateTextWidth(fontData,  String.fromCharCode(ch));
-    
+
     if (advance) {
       {{{ makeSetValue('advance', '0', 'width', 'i32') }}};
     }
     if (minx) {
-      {{{ makeSetValue('minx', '0', '0', 'i32') }}}; 
+      {{{ makeSetValue('minx', '0', '0', 'i32') }}};
     }
     if (maxx) {
-      {{{ makeSetValue('maxx', '0', 'width', 'i32') }}}; 
+      {{{ makeSetValue('maxx', '0', 'width', 'i32') }}};
     }
     if (miny) {
-      {{{ makeSetValue('miny', '0', '0', 'i32') }}}; 
+      {{{ makeSetValue('miny', '0', '0', 'i32') }}};
     }
     if (maxy) {
-      {{{ makeSetValue('maxy', '0', 'fontData.size', 'i32') }}}; 
+      {{{ makeSetValue('maxy', '0', 'fontData.size', 'i32') }}};
     }
   },
 
@@ -3367,23 +3517,311 @@ var LibrarySDL = {
 
   SDL_RWFromConstMem: function(mem, size) {
     var id = SDL.rwops.length; // TODO: recycle ids when they are null
-    SDL.rwops.push({ bytes: mem, count: size });
+    SDL.rwops.push({ bytes: mem, count: size, position: 0 });
     return id;
   },
   SDL_RWFromMem: 'SDL_RWFromConstMem',
 
-  SDL_RWFromFile: function(_name, mode) {
+  SDL_RWFromFile__deps: ['fopen'],
+  SDL_RWFromFile: function(_name, _mode) {
     var id = SDL.rwops.length; // TODO: recycle ids when they are null
-    var name = Pointer_stringify(_name)
-    SDL.rwops.push({ filename: name, mimetype: Browser.getMimetype(name) });
+    var name = Pointer_stringify(_name);
+    var mode = Pointer_stringify(_mode);
+    var path = PATH.resolve(name);
+
+    console.log(mode);
+
+    var ptr = _fopen(_name, _mode);
+    console.log(ptr);
+
+    if (!ptr) {
+      return 0;
+    }
+
+    SDL.rwops.push({
+      filename: name,
+      mimetype: Browser.getMimetype(name),
+      mode: mode,
+      stream: FS.getStreamFromPtr(ptr),
+      ptr: ptr
+    });
     return id;
   },
-  
+
   SDL_FreeRW: function(rwopsID) {
     SDL.rwops[rwopsID] = null;
     while (SDL.rwops.length > 0 && SDL.rwops[SDL.rwops.length-1] === null) {
       SDL.rwops.pop();
     }
+  },
+
+  SDL_RWseek: function(rwopsID, offset, whence) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      try {
+        return FS.llseek(rwops.stream, offset, whence);
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    } else {
+      if (whence === 1) { // SEEK_CUR.
+        rwops.position += offset;
+      } else if (whence === 2) { //SEEK_END
+        rwops.position = rwops.count - offset;
+      } else {
+        rwops.position = offset;
+      }
+
+      return rwops.position;
+    }
+  },
+
+  SDL_RWtell: function(rwopsID) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    return rwops.stream ? rwops.stream.position : rwops.position;
+  },
+
+  SDL_RWread__deps: ['memcpy'],
+  SDL_RWread: function(rwopsID, buffer, size, maxnum) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      try {
+        var slab = {{{ makeGetSlabs('buffer', 'i8', true) }}};
+        var ret = FS.read(rwops.stream, slab, buffer, size * maxnum);
+        return ret / size;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    } else {
+      _memcpy(buffer, rwops.bytes + rwops.position, size * maxnum);
+      rwops.position += (size * maxnum);
+      return maxnum;
+    }
+  },
+
+  SDL_RWwrite__deps: ['fwrite'],
+  SDL_RWwrite: function(rwopsID, ptr, size, n) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.ptr) {
+      return _fwrite(ptr, size, n, rwops.ptr);
+    }
+    
+    throw new Error("SDL_RWwrite: writing to memory not implemented yet!");
+  },
+
+#if USE_PTHREADS
+  SDL_ReadBE32__postset: 'if (ENVIRONMENT_IS_PTHREAD) _SDL_ReadBE32.ret = PthreadWorkerInit._SDL_ReadBE32_ret; else PthreadWorkerInit._SDL_ReadBE32_ret = _SDL_ReadBE32.ret = new Buffer(4)',
+#else
+  SDL_ReadBE32__postset: '_SDL_ReadBE32.ret = new ArrayBuffer(4);',
+#endif
+  SDL_ReadBE32: function(rwopsID) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      if (rwops.stream.eof || rwops.stream.error) {
+        return -1;
+      }
+
+      var ret = FS.read(rwops.stream, _SDL_ReadBE32.ret, 0, 4);
+
+      if (ret == 0) {
+        return -1;
+      } else if (ret == -1) {
+        rwops.stream.error = true;
+        return -1;
+      } else {
+        return (
+          _SDL_ReadBE32.ret[3] |
+          (_SDL_ReadBE32.ret[2] << 8) |
+          (_SDL_ReadBE32.ret[1] << 16) |
+          (_SDL_ReadBE32.ret[0] << 24)
+        ) >>> 0;
+      }
+    } else {
+      if (rwops.position > (rwops.count - 4)) {
+        throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+      }
+      var value = getValue(rwops.bytes + rwops.position, 'i32');
+      value = (
+        (((value >> 24) & 0xFF) >>> 0) |
+        ((((value >> 16) & 0xFF) << 8) >>> 0) |
+        ((((value >> 8) & 0xFF) << 16) >>> 0) |
+        ((((value) & 0xFF) << 24) >>> 0)
+      ) >>> 0;
+
+      rwops.position += 4;
+
+      return value;
+    }
+  },
+
+#if USE_PTHREADS
+  SDL_ReadLE32__postset: 'if (ENVIRONMENT_IS_PTHREAD) _SDL_ReadLE32.ret = PthreadWorkerInit._SDL_ReadLE32_ret; else PthreadWorkerInit._SDL_ReadLE32_ret = _SDL_ReadLE32.ret = new Buffer(4)',
+#else
+  SDL_ReadLE32__postset: '_SDL_ReadLE32.ret = new Uint8Array(4);',
+#endif
+  SDL_ReadLE32: function(rwopsID) {
+ var rwops = SDL.rwops[rwopsID];
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      if (rwops.stream.eof || rwops.stream.error) {
+        return -1;
+      }
+
+      var ret = FS.read(rwops.stream, _SDL_ReadBE32.ret, 0, 4);
+
+      if (ret == 0) {
+        return -1;
+      } else if (ret == -1) {
+        rwops.stream.error = true;
+        return -1;
+      } else {
+        return (
+          _SDL_ReadBE32.ret[0] |
+          (_SDL_ReadBE32.ret[1] << 8) |
+          (_SDL_ReadBE32.ret[2] << 16) |
+          (_SDL_ReadBE32.ret[3] << 24)
+        ) >>> 0;
+      }
+    } else {
+      if (rwops.position > (rwops.count - 4)) {
+        throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+      }
+      var value = getValue(rwops.bytes + rwops.position, 'i32');
+      rwops.position += 4;
+
+      return value;
+    }
+  },
+
+#if USE_PTHREADS
+  SDL_ReadBE16__postset: 'if (ENVIRONMENT_IS_PTHREAD) _SDL_ReadBE16.ret = PthreadWorkerInit._SDL_ReadBE16_ret; else PthreadWorkerInit._SDL_ReadBE16_ret = _SDL_ReadBE16.ret = new Buffer(4)',
+#else
+  SDL_ReadBE16__postset: '_SDL_ReadBE16.ret = new DataView(new ArrayBuffer(2));',
+#endif
+  SDL_ReadBE16: function(rwopsID) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      if (rwops.stream.eof || rwops.stream.error) {
+        return -1;
+      }
+
+      var ret = FS.read(rwops.stream, _SDL_ReadBE16.ret, 0, 2);
+
+      if (ret == 0) {
+        return -1;
+      } else if (ret == -1) {
+        rwops.stream.error = true;
+        return -1;
+      } else {
+        return (_SDL_ReadBE16.ret[1] | (_SDL_ReadBE16.ret[0] << 8)) >>> 0;
+      }
+    } else {
+      if (rwops.position > (rwops.count - 2)) {
+        throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+      }
+      var value = getValue(rwops.bytes + rwops.position, 'i16');
+      value = (
+        ((value >> 8) & 0xFF) >>> 0 | (value << 8)
+      ) >>> 0;
+
+      rwops.position += 2;
+
+      return value;
+    }
+  },
+
+#if USE_PTHREADS
+  SDL_ReadLE16__postset: 'if (ENVIRONMENT_IS_PTHREAD) _SDL_ReadLE16.ret = PthreadWorkerInit._SDL_ReadLE16_ret; else PthreadWorkerInit._SDL_ReadLE16_ret = _SDL_ReadLE16.ret = new Buffer(4)',
+#else
+  SDL_ReadLE16__postset: '_SDL_ReadLE16.ret = new ArrayBuffer(2);',
+#endif
+  SDL_ReadLE16: function(rwopsID) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || (!rwops.stream && !rwops.bytes)) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    if (rwops.stream) {
+      if (rwops.stream.eof || rwops.stream.error) {
+        return -1;
+      }
+
+      var ret = FS.read(rwops.stream, _SDL_ReadBE16.ret, 0, 2);
+
+      if (ret == 0) {
+        return -1;
+      } else if (ret == -1) {
+        rwops.stream.error = true;
+        return -1;
+      } else {
+        return (_SDL_ReadBE16.ret[0] | (_SDL_ReadBE16.ret[1] << 8)) >>> 0;
+      }
+    } else {
+      if (rwops.position > (rwops.count - 2)) {
+        throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+      }
+      var value = getValue(rwops.bytes + rwops.position, 'i16');
+      rwops.position += 2;
+
+      return value;
+    }
+  },
+
+  SDL_RWclose: function(rwopsID) {
+    var rwops = SDL.rwops[rwopsID];
+
+    if (!rwops || !rwops.stream) {
+      ___setErrNo(ERRNO_CODES.EBADF);
+      return -1;
+    }
+
+    FS.close(rwops.stream);
+
+    _SDL_FreeRW(rwopsID);
   },
 
   SDL_GetNumAudioDrivers: function() { return 1 },

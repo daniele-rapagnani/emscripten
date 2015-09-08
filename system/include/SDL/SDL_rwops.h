@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_rwops.h
- *  
+ *
  *  This file provides a general interface for SDL to read and write
  *  data streams.  It can easily be extended to files, memory, etc.
  */
@@ -48,7 +48,7 @@ typedef struct SDL_RWops
     /**
      *  Seek to \c offset relative to \c whence, one of stdio's whence values:
      *  RW_SEEK_SET, RW_SEEK_CUR, RW_SEEK_END
-     *  
+     *
      *  \return the final offset in the data stream.
      */
     long (SDLCALL * seek) (struct SDL_RWops * context, long offset,
@@ -57,7 +57,7 @@ typedef struct SDL_RWops
     /**
      *  Read up to \c maxnum objects each of size \c size from the data
      *  stream to the area pointed at by \c ptr.
-     *  
+     *
      *  \return the number of objects read, or 0 at error or end of file.
      */
     size_t(SDLCALL * read) (struct SDL_RWops * context, void *ptr,
@@ -66,7 +66,7 @@ typedef struct SDL_RWops
     /**
      *  Write exactly \c num objects each of size \c size from the area
      *  pointed at by \c ptr to data stream.
-     *  
+     *
      *  \return the number of objects written, or 0 at error or end of file.
      */
     size_t(SDLCALL * write) (struct SDL_RWops * context, const void *ptr,
@@ -74,7 +74,7 @@ typedef struct SDL_RWops
 
     /**
      *  Close and free an allocated SDL_RWops structure.
-     *  
+     *
      *  \return 0 if successful or -1 on write error when flushing data.
      */
     int (SDLCALL * close) (struct SDL_RWops * context);
@@ -134,7 +134,7 @@ typedef struct SDL_RWops
 
 /**
  *  \name RWFrom functions
- *  
+ *
  *  Functions to create SDL_RWops structures from various data streams.
  */
 /*@{*/
@@ -166,7 +166,7 @@ extern DECLSPEC void SDLCALL SDL_FreeRW(SDL_RWops * area);
 
 /**
  *  \name Read/write macros
- *  
+ *
  *  Macros to easily read and write from an SDL_RWops structure.
  */
 /*@{*/
@@ -178,9 +178,9 @@ extern DECLSPEC void SDLCALL SDL_FreeRW(SDL_RWops * area);
 /*@}*//*Read/write macros*/
 
 
-/** 
+/**
  *  \name Read endian functions
- *  
+ *
  *  Read an item of the specified endianness and return in native format.
  */
 /*@{*/
@@ -192,9 +192,9 @@ extern DECLSPEC Uint64 SDLCALL SDL_ReadLE64(SDL_RWops * src);
 extern DECLSPEC Uint64 SDLCALL SDL_ReadBE64(SDL_RWops * src);
 /*@}*//*Read endian functions*/
 
-/** 
+/**
  *  \name Write endian functions
- *  
+ *
  *  Write an item of native format to the specified endianness.
  */
 /*@{*/
@@ -206,6 +206,17 @@ extern DECLSPEC size_t SDLCALL SDL_WriteLE64(SDL_RWops * dst, Uint64 value);
 extern DECLSPEC size_t SDLCALL SDL_WriteBE64(SDL_RWops * dst, Uint64 value);
 /*@}*//*Write endian functions*/
 
+#undef SDL_RWseek
+#undef SDL_RWtell
+#undef SDL_RWread
+#undef SDL_RWwrite
+#undef SDL_RWclose
+
+extern DECLSPEC long SDLCALL SDL_RWseek(struct SDL_RWops * context, long offset, int whence);
+extern DECLSPEC long SDLCALL SDL_RWtell(struct SDL_RWops * context);
+extern DECLSPEC size_t SDLCALL SDL_RWread(struct SDL_RWops * context, void *ptr, size_t size, size_t maxnum);
+extern DECLSPEC size_t SDLCALL SDL_RWwrite(struct SDL_RWops * context, const void *ptr, size_t size, size_t num);
+extern DECLSPEC int SDLCALL SDL_RWclose(struct SDL_RWops * context);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
